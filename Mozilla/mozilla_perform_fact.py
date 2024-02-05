@@ -15,6 +15,7 @@ from i2b2_cdi.common.bulk_uploader import BulkUploader
 from i2b2_cdi.common.constants import *
 from i2b2_cdi.fact import concept_cd_map as ConceptCdMap
 import os
+from importlib.resources import files
 
 def load_facts(file_list,config): 
     """Load the facts from the given file to the i2b2 instance using bcp tool.
@@ -45,9 +46,12 @@ def load_facts(file_list,config):
                 delimiter=str(config.bcp_delimiter),
                 batch_size=10000,
                 error_file="/usr/src/app/tmp/benchmark/logs/error_bcp_facts.log")
-        
         drop_indexes = Path('i2b2_cdi/resources/sql') / \
         'drop_indexes_observation_fact_pg.sql'
+
+        if not os.path.exists(drop_indexes):
+            drop_indexes = files('i2b2_cdi.resources.sql').joinpath('drop_indexes_observation_fact_pg.sql')
+
         if(str(config.crc_db_type)=='pg'):
             bulk_uploader.execute_sql_pg(drop_indexes,config)
             logger.info("Dropped indexes from observation_fact")
@@ -58,7 +62,9 @@ def load_facts(file_list,config):
         
         if(str(config.crc_db_type)=='pg'):
             create_indexes = Path('i2b2_cdi/resources/sql') / \
-            'create_indexes_observation_fact_pg.sql'                  
+            'create_indexes_observation_fact_pg.sql'        
+            if not os.path.exists(create_indexes):
+                create_indexes = files('i2b2_cdi.resources.sql').joinpath('create_indexes_observation_fact_pg.sql')          
             bulk_uploader.execute_sql_pg(create_indexes, config)
         logger.success(SUCCESS)
         return factsErrorsList
@@ -90,8 +96,13 @@ def bcp_upload(bcp_file_path,config):
         if(str(config.crc_db_type)=='pg'):
             drop_indexes = Path('i2b2_cdi/resources/sql') / \
             'drop_indexes_observation_fact_pg.sql'
-            create_indexes = Path('i2b2_cdi/resources/sql') / \
-            'create_indexes_observation_fact_pg.sql'
+            if os.path.exists(drop_indexes):
+                create_indexes = Path('i2b2_cdi/resources/sql') / \
+                'create_indexes_observation_fact_pg.sql'
+            else:
+                drop_indexes = files('i2b2_cdi.resources.sql').joinpath('drop_indexes_observation_fact_pg.sql')
+                create_indexes = files('i2b2_cdi.resources.sql').joinpath('create_indexes_observation_fact_pg.sql')          
+            
             bulkUploader.execute_sql_pg(drop_indexes,config)
             logger.info("Dropped indexes from observation_fact")
             bulkUploader.upload_facts_pg(config)        
